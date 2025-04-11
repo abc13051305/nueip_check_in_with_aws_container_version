@@ -60,6 +60,7 @@
     docker build -t nueip-checkin:latest .
     ```
     *   `-t nueip-checkin:latest`：為映像檔設定一個本地名稱和標籤。
+    *   這個步驟的command如果失敗可能是你Docker沒啟動
 
 5.  **標記 Docker 映像檔:**
     將本地映像檔標記為符合 ECR 儲存庫 URI 的格式：
