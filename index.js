@@ -1,24 +1,24 @@
 // 1. 引入依賴 - 改用 chrome-aws-lambda 和 puppeteer-core
 const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core'); // 注意是 puppeteer-core
+const puppeteer = require('puppeteer-core');
 const fetch = require('node-fetch');
 
-// 2. 環境變數 (保持不變)
+// 2. 環境變數
 const {
   COMPANY_CODE,
   ACCOUNT,
   PASSWORD,
   DISCORD_WEBHOOK,
-  LATITUDE, // 確保是字串形式的數字
-  LONGITUDE // 確保是字串形式的數字
+  LATITUDE,
+  LONGITUDE
 } = process.env;
 
-// 3. 時間格式函數 (保持不變)
+// 3. 時間格式函數
 function getNowString() {
   return new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
 }
 
-// 4. 取得今天日期函數 (保持不變)
+// 4. 取得今天日期函數
 function getTodayDateString() {
   const date = new Date();
   return date.toISOString().split('T')[0];
@@ -27,7 +27,7 @@ function getTodayDateString() {
 // 5. 發送 Discord 通知函數
 async function sendDiscordMessage(message) {
   const fullMessage = `[${getNowString()}] ${message}`;
-  console.log(fullMessage); // 同時在 CloudWatch 中記錄日誌
+  console.log(fullMessage);
   if (!DISCORD_WEBHOOK) {
     console.warn('⚠️ DISCORD_WEBHOOK 未設定，無法發送通知。');
     return;
@@ -43,7 +43,7 @@ async function sendDiscordMessage(message) {
   }
 }
 
-// 6. 檢查是否為休息日函數 (保持不變)
+// 6. 檢查是否為休息日函數
 async function isHoliday() {
   const today = getTodayDateString();
   const year = today.split('-')[0];
@@ -54,7 +54,7 @@ async function isHoliday() {
         throw new Error(`休息日 API 請求失敗，狀態碼：${response.status}`);
     }
     const data = await response.json();
-    const todayInfo = data.find(item => item.date === today);
+    const todayInfo = data.find(item => item.date === today.replace(/-/g, ''));
     if (!todayInfo) {
       console.warn(`⚠️ 沒有找到 ${today} 的資料，預設為工作日`);
       return false;
@@ -128,7 +128,6 @@ exports.handler = async (event) => {
     console.log('登入頁面載入完成');
 
     console.log('填寫登入資訊...');
-    // 注意：新版登入頁面的選擇器可能也變了，如果這裡失敗需要更新
     await page.waitForSelector('input[name="inputCompany"]', { timeout: 10000 });
     await page.type('input[name="inputCompany"]', COMPANY_CODE, { delay: 50 });
     await page.waitForSelector('input[name="inputID"]', { timeout: 5000 });
@@ -138,18 +137,15 @@ exports.handler = async (event) => {
     console.log('登入資訊填寫完成');
 
     console.log('點擊登入按鈕...');
-    // 注意：新版登入按鈕的選擇器可能也變了，如果這裡失敗需要更新
     await Promise.all([
-      page.click('button.login-button'), // <-- 假設登入按鈕沒變，如果變了也要改
+      page.click('button.login-button'),
       page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }),
     ]);
     console.log('登入成功，已導向主頁');
 
-    // --- 使用 XPath 查找按鈕 ---
     console.log('增加 10 秒初始等待...');
     await page.waitForTimeout(10000);
 
-    // 構建 XPath 表達式，查找包含正確文字標題的按鈕
     const buttonXPath = `//button[.//div[@class='punch-button__title']/span[normalize-space(.)='${punchType}']]`;
     console.log(`尋找打卡按鈕 (精確 XPath): ${buttonXPath}`);
 
@@ -203,7 +199,6 @@ exports.handler = async (event) => {
         await sendDiscordMessage(`❌ 打卡失敗：${waitError.name}: ${waitError.message}`);
         throw waitError;
     }
-    // --- 結束 XPath 查找邏輯 ---
 
   } catch (error) {
     console.error('打卡流程發生頂層錯誤:', error);
